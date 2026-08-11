@@ -1,0 +1,35 @@
+# --- Deployment : fait tourner le container ---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: decoy-a
+spec:
+  replicas: 1                    # 1 seule copie, pas besoin de plus pour un decoy
+  selector:
+    matchLabels:
+      app: decoy-a               # comment le Deployment retrouve "ses" pods
+  template:
+    metadata:
+      labels:
+        app: decoy-a             # doit matcher le selector ci-dessus
+    spec:
+      nodeSelector:
+        role: decoys             # force ce pod sur ton node labellisé "decoys"
+      containers:
+        - name: decoy-a
+          image: i1337x/decoy-a:latest
+          imagePullPolicy: IfNotPresent # important, voir remarque plus bas
+          ports:
+            - containerPort: 3000
+---
+# --- Service : donne un nom réseau stable ---
+apiVersion: v1
+kind: Service
+metadata:
+  name: decoy-a
+spec:
+  selector:
+    app: decoy-a                 # cible les pods ayant ce label
+  ports:
+    - port: 3000
+      targetPort: 3000
