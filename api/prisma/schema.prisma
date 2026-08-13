@@ -5,10 +5,24 @@
 
 generator client {
   provider     = "prisma-client"
-  output       = "../generated/prisma"
+  output       = "../src/generated/prisma"
   moduleFormat = "cjs"
 }
 
 datasource db {
   provider = "postgresql"
+}
+
+model HealthReport {
+  id        Int      @id @default(autoincrement())
+  createdAt DateTime @default(now())
+  status    String
+  httpStatus   Int?
+  service   String
+  timestamp DateTime
+  uptime    Float
+  elapsed   Int
+  detail       String?
+
+  @@index([service, createdAt]) // database optimisation
 }
