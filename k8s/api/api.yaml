@@ -1,0 +1,49 @@
+# --- Deployment : fait tourner le container ---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: api
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: api                   # comment le Deployment retrouve "ses" pods
+  template:
+    metadata:
+      labels:
+        app: api                 # doit matcher le selector ci-dessus
+    spec:
+      nodeSelector:
+        role: app                # force ce pod sur ton node labellisé "app"
+      containers:
+        - name: api
+          image: i1337x/api:latest
+          imagePullPolicy: Always # image en dev actif, contrairement aux decoys il faut toujours repull :latest
+          ports:
+            - containerPort: 8080
+          env:
+            - name: PROD
+              value: "1"          # bascule health-check.service.ts sur les DNS internes K8s (http://decoy-x:3000) au lieu de localhost
+            - name: POSTGRES_USER
+              valueFrom:
+                secretKeyRef: { name: postgres-secret, key: POSTGRES_USER }
+            - name: POSTGRES_PASSWORD
+              valueFrom:
+                secretKeyRef: { name: postgres-secret, key: POSTGRES_PASSWORD }
+            - name: POSTGRES_DB
+              valueFrom:
+                secretKeyRef: { name: postgres-secret, key: POSTGRES_DB }
+            - name: DATABASE_URL
+              value: "postgresql://$(POSTGRES_USER):$(POSTGRES_PASSWORD)@postgres:5432/$(POSTGRES_DB)"
+---
+# --- Service : donne un nom réseau stable ---
+apiVersion: v1
+kind: Service
+metadata:
+  name: api
+spec:
+  selector:
+    app: api                     # cible les pods ayant ce label
+  ports:
+    - port: 8080
+      targetPort: 8080
