@@ -1,8 +1,11 @@
 import { BadGatewayException, ForbiddenException, Injectable } from '@nestjs/common';
+import { PrismaService } from 'src/prisma/prisma.service';
+import { CreateHealthReportInput, DecoyHealthResponse } from './types/report.type';
 
 @Injectable()
 export class HealthCheckService {
     private readonly authList = ['decoy-a', 'decoy-b', 'decoy-c'];
+    constructor(private prisma: PrismaService) {}
 
     // health proxy
    async getTargetHealth(serverId: string) {
@@ -20,8 +23,17 @@ export class HealthCheckService {
         throw new BadGatewayException(`Health check failed for ${serverId}`);
     }
 
-    const data = await res.json();
+    const data = (await res.json()) as DecoyHealthResponse;
     const elapsed = Date.now() - start;
+    const finalReport: CreateHealthReportInput = {
+    status: data.status,
+    service: data.service,
+    timestamp: new Date(data.timestamp), 
+    uptime: data.uptime,
+    elapsed,
+    };
+
+    await this.prisma.healthReport.create({ data: finalReport });
 
     return { ...data, elapsed };
 }

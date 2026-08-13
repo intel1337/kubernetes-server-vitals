@@ -4,6 +4,7 @@ import { Param } from '@nestjs/common';
 @Controller('hc')
 export class HealthCheckController {
     constructor(private healthCheckService: HealthCheckService) {} 
+    
 
     @Get('target/:serverId')
     getTargetHealth(@Param('serverId') serverId: string) {

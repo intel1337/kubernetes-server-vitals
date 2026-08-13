@@ -15,6 +15,7 @@ app.get('/health', (req,res)=>{
     service: 'decoy-a',
     timestamp: new Date().toISOString(),
     uptime: process.uptime(), // en secondes, depuis le démarrage du process
+    
   });
    
 });
