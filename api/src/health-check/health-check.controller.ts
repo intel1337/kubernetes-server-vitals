@@ -1,9 +1,11 @@
-import { Controller, Get } from '@nestjs/common';
+import { Controller, Get, ServiceUnavailableException } from '@nestjs/common';
 import { HealthCheckService } from './health-check.service';
+
 import { Param } from '@nestjs/common';
 @Controller('hc')
 export class HealthCheckController {
     constructor(private healthCheckService: HealthCheckService) {} 
+   
     
 
     @Get('target/:serverId')
@@ -24,4 +26,5 @@ export class HealthCheckController {
   getAllTargetsTelemetry(){
     return this.healthCheckService.getAllTargetsTelemetry();
   }
+
 }

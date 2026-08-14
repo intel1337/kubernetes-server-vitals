@@ -7,33 +7,53 @@ spec:
   replicas: 1
   selector:
     matchLabels:
-      app: api                   # comment le Deployment retrouve "ses" pods
+      app: api # comment le Deployment retrouve "ses" pods
   template:
     metadata:
       labels:
-        app: api                 # doit matcher le selector ci-dessus
+        app: api # doit matcher le selector ci-dessus
     spec:
       nodeSelector:
-        role: app       
+        role: app
       initContainers:
-      - name: migrate
-        image: i1337x/api:latest
-        command: ["npx", "prisma", "migrate", "deploy"]
-        envFrom:
-          - secretRef:
-              name: postgres-secret
-        env:
-          - name: DATABASE_URL
-            value: "postgresql://$(POSTGRES_USER):$(POSTGRES_PASSWORD)@postgres:5432/$(POSTGRES_DB)"        
+        - name: migrate
+          image: i1337x/api:latest
+          command: ["npx", "prisma", "migrate", "deploy"]
+          envFrom:
+            - secretRef:
+                name: postgres-secret
+          env:
+            - name: DATABASE_URL
+              value: "postgresql://$(POSTGRES_USER):$(POSTGRES_PASSWORD)@postgres:5432/$(POSTGRES_DB)"
       containers:
         - name: api
           image: i1337x/api:latest
-          imagePullPolicy: Always # image en dev actif, contrairement aux decoys il faut toujours repull :latest
           ports:
             - containerPort: 8080
+          resources:
+            requests:
+              cpu: "250m"
+              memory: "250M"
+            limits:
+              cpu: "500m"
+              memory: "500M"
+          readinessProbe:
+            httpGet:
+              path: /readyz
+              port: 8080
+            initialDelaySeconds: 3
+            periodSeconds: 5
+            failureThreshold: 3
+          livenessProbe:
+            httpGet:
+              path: /
+              port: 8080
+            initialDelaySeconds: 10
+            periodSeconds: 15
+            failureThreshold: 3
           env:
             - name: PROD
-              value: "1"          # bascule health-check.service.ts sur les DNS internes K8s (http://decoy-x:3000) au lieu de localhost
+              value: "1" # bascule health-check.service.ts sur les DNS internes K8s (http://decoy-x:3000) au lieu de localhost
             - name: POSTGRES_USER
               valueFrom:
                 secretKeyRef: { name: postgres-secret, key: POSTGRES_USER }
@@ -53,7 +73,7 @@ metadata:
   name: api
 spec:
   selector:
-    app: api                     # cible les pods ayant ce label
+    app: api # cible les pods ayant ce label
   ports:
     - port: 8080
       targetPort: 8080
