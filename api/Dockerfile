@@ -16,6 +16,8 @@ COPY package*.json ./
 RUN npm install --production
 
 COPY --from=builder /app/dist ./dist
+COPY prisma ./prisma
+COPY prisma.config.ts ./
 
 EXPOSE 8080
 CMD ["node", "dist/main"]

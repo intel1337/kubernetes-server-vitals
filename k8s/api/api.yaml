@@ -14,7 +14,17 @@ spec:
         app: api                 # doit matcher le selector ci-dessus
     spec:
       nodeSelector:
-        role: app                # force ce pod sur ton node labellisé "app"
+        role: app       
+      initContainers:
+      - name: migrate
+        image: i1337x/api:latest
+        command: ["npx", "prisma", "migrate", "deploy"]
+        envFrom:
+          - secretRef:
+              name: postgres-secret
+        env:
+          - name: DATABASE_URL
+            value: "postgresql://$(POSTGRES_USER):$(POSTGRES_PASSWORD)@postgres:5432/$(POSTGRES_DB)"        
       containers:
         - name: api
           image: i1337x/api:latest
