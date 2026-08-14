@@ -6,9 +6,10 @@ This project is not meant to replace those tools — it exists to understand how
 
 ## What it does
 
-- Three small Express servers ("decoys") simulate services being monitored. Two are stable; the third randomly delays and occasionally returns a 500, to simulate a flaky service.
-- A NestJS API polls each decoy's `/health` endpoint, measures response time, and records every check (status, HTTP code, timestamp, uptime, elapsed time, and a detail message) in PostgreSQL.
-- Everything runs in a local Kubernetes cluster (`kind`), spread across nodes dedicated to specific roles, mirroring how a real cluster separates concerns.
+- Three small Express servers ("decoys") simulate services being monitored. Two are stable; the third randomly delays and occasionally fails with a randomly picked HTTP error (500, 502, 503, or 504), to simulate a flaky service.
+- Each decoy also exposes a `/telemetry` endpoint (CPU, memory, heap, and disk usage) — on decoy-c, this endpoint can fail independently of `/health`, with its own random error chance.
+- A NestJS API polls each decoy's `/health` and `/telemetry` endpoints, measures response time, and records every check in PostgreSQL — health checks (status, HTTP code, timestamp, uptime, elapsed time, detail message) and telemetry snapshots (CPU/memory/heap/disk) are stored in separate tables.
+- Everything runs in a local Kubernetes cluster (`kind`), spread across nodes dedicated to specific roles, mirroring how a real cluster separates concerns. [Headlamp](https://github.com/kubernetes-sigs/headlamp) is available as an optional web UI for inspecting the cluster.
 - A Next.js dashboard (planned) will expose this data: an overview of all services, a detail view per service, and a public status page.
 
 ## License
@@ -50,11 +51,12 @@ Every Deployment pins its pods to the correct node via `nodeSelector`, so statef
 
 | Service | Type | Port | Purpose |
 |---|---|---|---|
-| `decoy-a` | ClusterIP | 3000 | Stable target |
-| `decoy-b` | ClusterIP | 3000 | Stable target |
-| `decoy-c` | ClusterIP | 3000 | Unstable target (random delay + 20% error rate) |
-| `api` | ClusterIP | 8080 | NestJS health-check proxy + persistence |
-| `postgres` | ClusterIP | 5432 | Health check history |
+| `decoy-a` | ClusterIP | 3000 | Stable target (`/health`, `/telemetry`) |
+| `decoy-b` | ClusterIP | 3000 | Stable target (`/health`, `/telemetry`) |
+| `decoy-c` | ClusterIP | 3000 | Unstable target — random delay, ~20% error rate on both `/health` and `/telemetry` (independently) |
+| `api` | ClusterIP | 8080 | NestJS health-check + telemetry proxy, persistence |
+| `postgres` | ClusterIP | 5432 | Health check + telemetry history |
+| `headlamp` *(optional, `kube-system`)* | ClusterIP | 80 | Kubernetes web UI for inspecting the cluster |
 
 Images are built locally, pushed to Docker Hub (`i1337x/*`), then pulled by the cluster — `kind` does not read local Docker images directly.
 
@@ -152,10 +154,7 @@ Editing a YAML file does nothing to the cluster until it's applied. The workflow
 - **You changed a manifest** (`api.yaml`, `postgres.yaml`, a decoy yaml): run that component's `deploy.sh` again. `kubectl apply` pushes the new spec and triggers a rollout automatically.
 - **You changed application code but not the manifest** (e.g. rebuilt the `api` image under the same `:latest` tag): run that component's `rollout.sh` instead, which does `kubectl rollout restart deployment <name>` to force pods to restart and re-pull the image.
 
-| Component | `imagePullPolicy` | Why |
-|---|---|---|
-| `decoy-a`, `decoy-b`, `decoy-c` | `IfNotPresent` | Stable images that rarely change |
-| `api` | `Always` | Actively iterated on; must always fetch the current `:latest` |
+All components (`api`, `decoy-a`, `decoy-b`, `decoy-c`) currently use `imagePullPolicy: Always`, since everything is still under active iteration — each redeploy needs to actually fetch the freshly pushed `:latest` image rather than reuse whatever a node already cached.
 
 ## Local development (without the cluster)
 
@@ -221,15 +220,67 @@ Returns an array of the same shape, one entry per decoy. A target that fails (no
 
 `serverId` is restricted to a fixed allow-list (`decoy-a`, `decoy-b`, `decoy-c`); any other value returns a 403.
 
+Telemetry follows the same shape, under `/hc/telemetry/*`:
+
+```bash
+curl http://localhost:8080/hc/telemetry/target/decoy-a
+```
+
+```json
+{
+  "service": "decoy-a",
+  "cpuPercent": 0.0018,
+  "memoryUsedMb": 83.6,
+  "memoryTotalMb": 15950.66,
+  "diskUsedMb": 71928.88,
+  "diskTotalMb": 1081101.18,
+  "heapUsedMb": 8.08,
+  "heapTotalMb": 11.51,
+  "httpStatus": 200
+}
+```
+
+```bash
+curl http://localhost:8080/hc/telemetry/all
+```
+
+Same as `/hc/all`: one entry per decoy, every request persisted — this time to the `Telemetry` table rather than `HealthReport`.
+
+## Cluster UI (Headlamp)
+
+[Headlamp](https://github.com/kubernetes-sigs/headlamp) is an optional web dashboard for browsing the cluster (pods, deployments, logs, and so on) without living in `kubectl`. It deploys into the `kube-system` namespace:
+
+```bash
+bash k8s/external/headlamp.sh
+```
+
+It's a `ClusterIP` service, so forward it locally:
+
+```bash
+kubectl port-forward -n kube-system svc/headlamp 8000:80
+```
+
+Then open `http://localhost:8000`. The default manifest doesn't create a login identity, so generate an admin token once:
+
+```bash
+kubectl create serviceaccount headlamp-admin -n kube-system
+kubectl create clusterrolebinding headlamp-admin --serviceaccount=kube-system:headlamp-admin --clusterrole=cluster-admin
+kubectl create token headlamp-admin -n kube-system
+```
+
+Paste the printed token into Headlamp's login screen. Tokens are short-lived — regenerate with the last command whenever it expires.
+
 ## Features
 
-- Three containerized decoy services, one intentionally unreliable, for realistic failure testing
-- NestJS API proxying health checks to each decoy, with per-target and bulk endpoints
+- Three containerized decoy services, one intentionally unreliable, for realistic failure testing — random delay, and a random pick between several HTTP error codes (500/502/503/504) instead of a single hardcoded failure
+- Per-decoy telemetry (CPU, memory, heap, disk) exposed on its own `/telemetry` endpoint, separate from `/health` — on decoy-c, each endpoint fails independently, so a telemetry outage doesn't imply a health-check outage or vice versa
+- NestJS API proxying both health checks and telemetry to each decoy, with per-target and bulk endpoints for each
 - Response-time measurement (`elapsed`, in milliseconds) timed locally around each request, independent of any clock skew between pods
-- Every health check persisted to PostgreSQL via Prisma, with a uniform result shape across success, HTTP error, and unreachable cases
-- A composite database index (`service`, `createdAt`) tuned for "latest status per service" and "history over N days" query patterns
+- Every check persisted to PostgreSQL via Prisma — health checks and telemetry snapshots in separate tables, with a uniform result shape across success, HTTP error, and unreachable cases
+- A composite database index (`service`, `createdAt`/`recordedAt`) on both tables, tuned for "latest status per service" and "history over N days" query patterns
 - Kubernetes deployment across role-dedicated nodes (`decoys`, `app`, `data`), with Postgres-backed persistent storage
 - Database migrations applied automatically on deploy via a Kubernetes init container
+- Optional Headlamp web UI for browsing the cluster without relying solely on `kubectl`
 
 ## Roadmap
 
