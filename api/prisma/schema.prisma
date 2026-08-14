@@ -26,3 +26,18 @@ model HealthReport {
 
   @@index([service, createdAt]) // database optimisation
 }
+
+model Telemetry {
+  id            Int      @id @default(autoincrement())
+  service       String
+  cpuPercent    Float?
+  memoryUsedMb  Float?
+  memoryTotalMb Float?
+  diskUsedMb    Float?
+  diskTotalMb   Float?
+  heapUsedMb    Float?
+  heapTotalMb   Float?
+  recordedAt    DateTime @default(now())
+
+  @@index([service, recordedAt])
+}
