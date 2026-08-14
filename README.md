@@ -24,7 +24,7 @@ Full license text: see [LICENSE](./LICENSE) or https://www.gnu.org/licenses/agpl
 
 ## Disclaimer
 
-This is a personal learning/portfolio project built to practice Kubernetes, Docker, NestJS and Next.js. It is **not production-ready**:
+This is a personal learning project built to practice Kubernetes, Docker, NestJS and Next.js. It is **not production-ready**:
 
 - No security audit has been performed.
 - Example configs in this repo (passwords, secrets, tokens) are placeholders — never reuse them, and never commit real credentials.
