@@ -14,15 +14,15 @@ datasource db {
 }
 
 model HealthReport {
-  id        Int      @id @default(autoincrement())
-  createdAt DateTime @default(now())
-  status    String
-  httpStatus   Int?
-  service   String
-  timestamp DateTime
-  uptime    Float
-  elapsed   Int
-  detail       String?
+  id         Int      @id @default(autoincrement())
+  createdAt  DateTime @default(now())
+  status     String
+  httpStatus Int?
+  service    String
+  timestamp  DateTime
+  uptime     Float
+  elapsed    Int
+  detail     String?
 
   @@index([service, createdAt]) // database optimisation
 }
@@ -38,6 +38,7 @@ model Telemetry {
   heapUsedMb    Float?
   heapTotalMb   Float?
   recordedAt    DateTime @default(now())
+  httpStatus    Int?
 
   @@index([service, recordedAt])
 }

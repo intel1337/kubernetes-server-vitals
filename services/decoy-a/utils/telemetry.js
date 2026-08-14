@@ -47,6 +47,9 @@ class Telemetry {
         const stats = fs.statfsSync('/');
         return (stats.blocks * stats.bsize) / 1000000;
     }
+    isImported(){
+        console.log("Imported")
+    }
 }
 
 export default Telemetry;

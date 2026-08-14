@@ -1,6 +1,6 @@
 import { BadGatewayException, ForbiddenException, Injectable } from '@nestjs/common';
 import { PrismaService } from 'src/prisma/prisma.service';
-import { CreateHealthReportInput, DecoyHealthResponse } from './types/report.type';
+import { TelemetryResponse, CreateTelemetryReport, CreateHealthReportInput, DecoyHealthResponse } from './types/report.type';
 
 @Injectable()
 export class HealthCheckService {
@@ -93,6 +93,124 @@ export class HealthCheckService {
                         httpStatus: res.status,
                     };
                     await this.prisma.healthReport.create({ data: finalReport });
+
+                    return finalReport;
+                } catch (err) {
+                    const elapsed = Date.now() - start;
+                    const finalReport: CreateHealthReportInput = {
+                        status: 'unreachable',
+                        service: element,
+                        timestamp: new Date(start),
+                        uptime: 0,
+                        elapsed,
+                        httpStatus: null,
+                        detail: err instanceof Error ? err.message : String(err),
+                    };
+                    await this.prisma.healthReport.create({ data: finalReport });
+                    return finalReport;
+                }
+            })
+        );
+
+        return results;
+    }
+    // Telemtry Proxy
+    async getTargetTelemetry(serverId: string) {
+        if (!this.authList.includes(serverId)) {
+            throw new ForbiddenException('Server is not authorized for Telemetry checks');
+        }
+        const isProd = process.env.PROD === '1';
+        const target = isProd
+            ? `http://${serverId}:3000/telemetry`
+            : `http://localhost:${3000 + this.authList.indexOf(serverId)}/telemetry`;
+
+        const start = Date.now();
+        const res = await fetch(target);
+        const elapsed = Date.now() - start;
+
+        if (!res.ok) {
+            const finalReport: CreateTelemetryReport = {
+                service: serverId,
+                cpuPercent: null,
+                memoryUsedMb: null,
+                memoryTotalMb: null,
+                diskUsedMb: null,
+                diskTotalMb: null,
+                heapUsedMb: null,
+                heapTotalMb: null,
+                httpStatus: res.status
+
+            };
+            await this.prisma.telemetry.create({ data: finalReport });
+            throw new BadGatewayException(finalReport);
+        }
+
+        const data = (await res.json()) as TelemetryResponse;
+
+        const finalReport: CreateTelemetryReport = {
+            service: data.service,
+            cpuPercent: data.cpuPercent,
+            memoryUsedMb: data.memoryUsedMb,
+            memoryTotalMb: data.memoryTotalMb,
+            diskUsedMb: data.diskUsedMb,
+            diskTotalMb: data.diskTotalMb,
+            heapUsedMb: data.heapUsedMb,
+            heapTotalMb: data.heapTotalMb,
+            httpStatus: res.status,
+
+        };
+
+        await this.prisma.telemetry.create({ data: finalReport });
+
+        return finalReport;
+    }
+    // All target telemtry proxy
+    async getAllTargetsTelemetry() {
+        const isProd = process.env.PROD === '1';
+
+        const results = await Promise.all(
+            this.authList.map(async (element, index) => {
+                const target = isProd
+                    ? `http://${element}:3000/telemetry`
+                    : `http://localhost:${3000 + index}/telemetry`;
+
+                const start = Date.now();
+                try {
+                    const res = await fetch(target);
+                    const elapsed = Date.now() - start;
+
+                    if (!res.ok) {
+                        const finalReport: CreateTelemetryReport = {
+                            service: element,
+                            cpuPercent: null,
+                            memoryUsedMb: null,
+                            memoryTotalMb: null,
+                            diskUsedMb: null,
+                            diskTotalMb: null,
+                            heapUsedMb: null,
+                            heapTotalMb: null,
+                            httpStatus: res.status
+
+                        };
+                        await this.prisma.telemetry.create({ data: finalReport });
+                        return finalReport;
+                    }
+
+                    const data = (await res.json()) as TelemetryResponse;
+
+                    const finalReport: CreateTelemetryReport = {
+                        service: data.service,
+                        cpuPercent: data.cpuPercent,
+                        memoryUsedMb: data.memoryUsedMb,
+                        memoryTotalMb: data.memoryTotalMb,
+                        diskUsedMb: data.diskUsedMb,
+                        diskTotalMb: data.diskTotalMb,
+                        heapUsedMb: data.heapUsedMb,
+                        heapTotalMb: data.heapTotalMb,
+                        httpStatus: res.status,
+
+                    };
+                    await this.prisma.telemetry.create({ data: finalReport });
 
                     return finalReport;
                 } catch (err) {

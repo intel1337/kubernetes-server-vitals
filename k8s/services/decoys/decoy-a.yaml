@@ -18,7 +18,7 @@ spec:
       containers:
         - name: decoy-a
           image: i1337x/decoy-a:latest
-          imagePullPolicy: IfNotPresent # important, voir remarque plus bas
+          imagePullPolicy: Always # important, voir remarque plus bas
           ports:
             - containerPort: 3000
 ---

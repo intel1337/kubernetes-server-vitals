@@ -12,6 +12,7 @@ app.get('/', (req, res) => {
 });
 
 app.get('/health', (req,res)=>{
+
  res.json({
     status: 'ok',
     service: 'decoy-a',
@@ -22,6 +23,7 @@ app.get('/health', (req,res)=>{
 });
 
 app.get('/telemetry', (req, res) => {
+
   res.json({
     service: 'decoy-a',
     timestamp: new Date().toISOString(),
@@ -37,4 +39,5 @@ app.get('/telemetry', (req, res) => {
 
 app.listen(port, () => {
   console.log(`decoy a listening on port ${port}`);
+
 });

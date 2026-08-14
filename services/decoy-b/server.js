@@ -13,6 +13,7 @@ app.get('/', (req, res) => {
 });
 
 app.get('/health', (req,res)=>{
+
  res.json({
     status: 'ok',
     service: 'decoy-b',
@@ -23,6 +24,7 @@ app.get('/health', (req,res)=>{
 });
 
 app.get('/telemetry', (req, res) => {
+
   res.json({
     service: 'decoy-b',
     timestamp: new Date().toISOString(),

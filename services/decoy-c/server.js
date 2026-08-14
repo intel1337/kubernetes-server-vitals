@@ -27,6 +27,7 @@ app.get('/', (req, res) => {
 });
 
 app.get('/health', async (req,res)=>{
+
   const value = GetFloatEntropy()*500
   await new Promise(r => setTimeout(r, value));
   if (maybeFail(res, 0.2)) return;
@@ -40,6 +41,7 @@ app.get('/health', async (req,res)=>{
 });
 
 app.get('/telemetry', (req, res) => {
+
   if (maybeFail(res, 0.2)) return;
   res.json({
     service: 'decoy-c',
@@ -56,7 +58,9 @@ app.get('/telemetry', (req, res) => {
 
 
 app.listen(port, () => {
+
   console.clear()
   console.log(`decoy c listening on port ${port}`);
   console.log(`Testing Float entropy generation ${GetFloatEntropy()*500}`)
+
 });

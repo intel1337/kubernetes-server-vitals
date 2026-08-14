@@ -16,4 +16,12 @@ export class HealthCheckController {
     return this.healthCheckService.getAllTargetsHealth();
 
   }
+  @Get('telemetry/target/:serverId')
+  getTargetTelemetry(@Param('serverId') serverId: string){
+    return this.healthCheckService.getTargetTelemetry(serverId)
+  }
+  @Get('telemetry/all')
+  getAllTargetsTelemetry(){
+    return this.healthCheckService.getAllTargetsTelemetry();
+  }
 }

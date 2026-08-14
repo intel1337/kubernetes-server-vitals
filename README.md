@@ -123,15 +123,7 @@ Decoys (from `services/`):
 bash services/build.sh
 ```
 
-This only builds the three decoy images locally (`decoy-a:latest`, `decoy-b:latest`, `decoy-c:latest`). Tag and push them yourself, replacing the username with your own Docker Hub account:
-
-```bash
-docker tag decoy-a:latest <your-dockerhub-user>/decoy-a:latest && docker push <your-dockerhub-user>/decoy-a:latest
-docker tag decoy-b:latest <your-dockerhub-user>/decoy-b:latest && docker push <your-dockerhub-user>/decoy-b:latest
-docker tag decoy-c:latest <your-dockerhub-user>/decoy-c:latest && docker push <your-dockerhub-user>/decoy-c:latest
-```
-
-(Unlike the decoys, `api/build.sh` builds, tags, *and* pushes in one go — see below.)
+This builds all three decoy images, tags them, and pushes them to `i1337x/decoy-a:latest`, `i1337x/decoy-b:latest`, and `i1337x/decoy-c:latest` — update the Docker Hub username in the script if you fork this.
 
 API (from `api/`):
 
