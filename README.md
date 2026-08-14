@@ -11,6 +11,26 @@ This project is not meant to replace those tools — it exists to understand how
 - Everything runs in a local Kubernetes cluster (`kind`), spread across nodes dedicated to specific roles, mirroring how a real cluster separates concerns.
 - A Next.js dashboard (planned) will expose this data: an overview of all services, a detail view per service, and a public status page.
 
+## License
+
+This project is licensed under the **GNU Affero General Public License v3.0 (AGPL-3.0)**.
+
+In short:
+- You're free to use, modify, and redistribute this code.
+- If you run a modified version of this project as a network service (even without distributing the binary), you must make your modified source code available to the users of that service — this is the key difference from the plain GPL.
+- Any derivative work must also be licensed under AGPL-3.0.
+
+Full license text: see [LICENSE](./LICENSE) or https://www.gnu.org/licenses/agpl-3.0.html
+
+## Disclaimer
+
+This is a personal learning/portfolio project built to practice Kubernetes, Docker, NestJS and Next.js. It is **not production-ready**:
+
+- No security audit has been performed.
+- Example configs in this repo (passwords, secrets, tokens) are placeholders — never reuse them, and never commit real credentials.
+- Provided "as is", without warranty of any kind (see the AGPL-3.0 license text, section 15-16).
+
+
 ## Architecture
 
 ### Cluster topology
